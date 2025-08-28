@@ -22,8 +22,8 @@ class ExpenseController extends Controller
         }
 
         // Filter by product
-        if ($request->filled('product')) {
-            $query->where('product', 'like', '%' . $request->product . '%');
+        if ($request->filled('name')) {
+            $query->where('title', 'like', '%' . $request->name . '%');
         }
 
         $expenses = $query->latest()->paginate($request->get('per_page', 5));
