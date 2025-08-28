@@ -9,6 +9,11 @@ class Expense extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'unit_price' => 'double:2',
+        'total_price' => 'double:2'
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

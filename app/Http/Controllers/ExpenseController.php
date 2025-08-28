@@ -26,6 +26,13 @@ class ExpenseController extends Controller
             $query->where('title', 'like', '%' . $request->name . '%');
         }
 
+        if ($request->filter === 'monthly') {
+            $query->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year);
+        } else {
+            $query->whereDate('created_at', today());
+        }
+
         $expenses = $query->latest()->paginate($request->get('per_page', 5));
         return response()->json($expenses);
     }
