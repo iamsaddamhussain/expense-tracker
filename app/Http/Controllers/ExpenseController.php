@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Builder\ResponseBuilder;
+use App\Http\Requests\ExpenseListingFormRequest;
 use App\Models\Expense;
 use Illuminate\Http\Request;
 
@@ -10,31 +12,16 @@ class ExpenseController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(ExpenseListingFormRequest $request): ResponseBuilder
     {
-        $query = Expense::with('category')->where('user_id', auth()->id())->latest();
-
-        // filter by category
-        if ($request->filled('category')) {
-            $query->whereHas('category', function ($q) use ($request) {
-                $q->where('name', 'ilike', '%' . $request->category . '%');
-            });
-        }
-
-        // Filter by product
-        if ($request->filled('name')) {
-            $query->where('title', 'like', '%' . $request->name . '%');
-        }
-
-        if ($request->filter === 'monthly') {
-            $query->whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year);
-        } else {
-            $query->whereDate('created_at', today());
-        }
-
-        $expenses = $query->latest()->paginate($request->get('per_page', 5));
-        return response()->json($expenses);
+        return new ResponseBuilder(
+            $request->applyListingFilters(
+                Expense::search($request->get('quicksearch'))
+                    ->with('category')
+                    ->where('user_id', auth()->id())
+                    ->latest()
+            )
+        );
     }
 
     /**
