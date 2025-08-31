@@ -14,14 +14,16 @@ class ExpenseController extends Controller
      */
     public function index(ExpenseListingFormRequest $request): ResponseBuilder
     {
-        return new ResponseBuilder(
+        $builder = new ResponseBuilder(
             $request->applyListingFilters(
                 Expense::search($request->get('quicksearch'))
                     ->with('category')
                     ->where('user_id', auth()->id())
                     ->latest()
-            )
+            ),
         );
+        $builder->withTotal(['SUM(total_price)']);
+        return $builder;
     }
 
     /**
