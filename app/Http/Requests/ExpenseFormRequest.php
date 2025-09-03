@@ -15,7 +15,6 @@ class ExpenseFormRequest extends FormRequest
     {
         return [
             'user_id' => ['required', 'exists:users,id'],
-            'category_id' => ['required', 'exists:categories,id'],
             'prompt' => ['required', 'string', 'max:255'],
         ];
     }

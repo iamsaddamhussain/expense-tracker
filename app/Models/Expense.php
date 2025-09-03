@@ -11,7 +11,15 @@ class Expense extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'title',
+        'quantity',
+        'unit_price',
+        'unit',
+        'total_price'
+    ];
     protected $casts = [
+        'quantity' => 'double',
         'unit_price' => 'double',
         'total_price' => 'double'
     ];

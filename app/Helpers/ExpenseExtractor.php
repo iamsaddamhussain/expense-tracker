@@ -32,6 +32,7 @@ class ExpenseExtractor
             "title": string,
             "quantity": number,
             "unit_price": number,
+            "unit": string,
             "total_price": number,
             "category": string
             }
@@ -40,6 +41,7 @@ class ExpenseExtractor
             - Always respond in pure JSON, no explanations.
             - Title should be a brief description of the item purchased.
             - If unit_price is missing, infer it as (total_price / quantity).
+            - Unit can be litre/KG/ml/gram.
             - Categories should be determined intelligently from the item mentioned (e.g., "bananas" → "Groceries", "cab" → "Transport", "hotel" → "Travel", etc.).
             - Numbers should be returned as decimals, not strings.
             - Ensure JSON is always valid and contains all 4 fields.

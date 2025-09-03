@@ -23,6 +23,7 @@ class ExpenseFactory extends Factory
             'description' => $this->faker->optional()->paragraph(),
             'quantity' => $this->faker->numberBetween(1, 10),
             'unit_price' => $this->faker->randomFloat(2, 1, 100),
+            'unit' => $this->faker->randomElement(['litre', 'KG', 'ml', 'gram']),
             'total_price' => function (array $attributes) {
                 return $attributes['quantity'] * $attributes['unit_price'];
             },

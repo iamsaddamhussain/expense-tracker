@@ -8,7 +8,10 @@ use App\Http\Requests\ExpenseFormRequest;
 use App\Http\Requests\ExpenseListingFormRequest;
 use App\Models\Category;
 use App\Models\Expense;
+use App\Models\User;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ExpenseController extends Controller
 {
@@ -43,20 +46,24 @@ class ExpenseController extends Controller
     public function store(ExpenseFormRequest $request)
     {
         $expenseAI = new ExpenseExtractor($request->input('prompt'));
-        $test = $expenseAI->extract();
-        $expense = new Expense();
+        $model = $expenseAI->extract();
 
-        $expense->user_id = $request->user()->id;
-        // I need to assign the extracted values to the $expense model here
-        $expense->title = $test['title'];
-        $expense->quantity = $test['quantity'];
-        $expense->unit_price = $test['unit_price'];
-        $expense->total_price = $test['total_price'];
-        // Assuming category is a string and you have a method to get category_id from category name if there's no category in the database just create it
-        $expense->category_id = Category::where('name', $test['category'])->first()->id ?? Category::create(['name' => $test['category']])->id;
+        $expense = new Expense();
+        $expense->title = $model['title'];
+        $expense->quantity = $model['quantity'];
+        $expense->unit_price = $model['unit_price'];
+        $expense->unit = $model['unit'];
+        $expense->total_price = $model['total_price'];
+        $expense->user()->associate(User::findOrFail($request->user()->id));
+        $expense->category()->associate(
+            Category::firstOrCreate(['name' => $model['category']])
+        );
         $expense->save();
 
-        return response()->json($expense);
+        return response()->json([
+            'message' => 'Expense created successfully',
+            'data' => $expense->load('category')
+        ], 201);
     }
 
     /**
