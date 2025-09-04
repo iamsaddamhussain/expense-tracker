@@ -2,84 +2,61 @@
 
 namespace App\Http\Controllers;
 
-use App\Builder\ResponseBuilder;
 use App\Helpers\ExpenseExtractor;
 use App\Http\Requests\ExpenseFormRequest;
 use App\Http\Requests\ExpenseListingFormRequest;
+use App\Http\Resources\ExpenseResource;
 use App\Models\Category;
 use App\Models\Expense;
-use App\Models\User;
-use GuzzleHttp\Psr7\Response;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Arr;
 
 class ExpenseController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(ExpenseListingFormRequest $request): ResponseBuilder
+    public function index(ExpenseListingFormRequest $request)
     {
-        $builder = new ResponseBuilder(
-            $request->applyListingFilters(
-                Expense::search($request->get('quicksearch'))
-                    ->with('category')
-                    ->where('user_id', auth()->id())
-                    ->latest()
-            ),
-        );
-        $builder->withTotal(['SUM(total_price)']);
-        return $builder;
+        $expenses = $request->applyListingFilters(
+            Expense::search($request->get('quicksearch'))
+                ->with('category')
+                ->where('user_id', auth()->id())
+                ->latest()
+        )
+            ->simplePaginate($request->get('per_page', 15));
+
+        return ExpenseResource::collection($expenses);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(ExpenseFormRequest $request)
     {
         $expenseAI = new ExpenseExtractor($request->input('prompt'));
-        $model = $expenseAI->extract();
+        $models = $expenseAI->extract(); // may return array or object
 
-        $expense = new Expense();
-        $expense->title = $model['title'];
-        $expense->quantity = $model['quantity'];
-        $expense->unit_price = $model['unit_price'];
-        $expense->unit = $model['unit'];
-        $expense->total_price = $model['total_price'];
-        $expense->user()->associate(User::findOrFail($request->user()->id));
-        $expense->category()->associate(
-            Category::firstOrCreate(['name' => $model['category']])
-        );
-        $expense->save();
+        // Always ensure it's an array of models
+        $models = Arr::isAssoc($models) ? [$models] : $models;
 
-        return response()->json([
-            'message' => 'Expense created successfully',
-            'data' => $expense->load('category')
-        ], 201);
-    }
+        $expenses = [];
+        foreach ($models as $model) {
+            $expense = new Expense();
+            $expense->title = $model['title'];
+            $expense->quantity = $model['quantity'];
+            $expense->unit_price = $model['unit_price'];
+            $expense->unit = $model['unit'];
+            $expense->total_price = $model['total_price'];
+            $expense->user()->associate($request->user());
+            $expense->category()->associate(
+                Category::firstOrCreate(['name' => $model['category']])
+            );
+            $expense->save();
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Expense $expense)
-    {
-        //
-    }
+            $expenses[] = $expense->load('category');
+        }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Expense $expense)
-    {
-        //
+        return ExpenseResource::collection($expenses)
+            ->additional([
+                'message' => 'Expenses created successfully'
+            ])
+            ->response()
+            ->setStatusCode(201);
     }
 
     /**
@@ -87,7 +64,8 @@ class ExpenseController extends Controller
      */
     public function update(Request $request, Expense $expense)
     {
-        //
+        // update of expense
+
     }
 
     /**
@@ -95,6 +73,7 @@ class ExpenseController extends Controller
      */
     public function destroy(Expense $expense)
     {
-        //
+        $expense->delete();
+        return response()->noContent();
     }
 }

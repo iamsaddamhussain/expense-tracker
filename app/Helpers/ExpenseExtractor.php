@@ -26,25 +26,29 @@ class ExpenseExtractor
     {
         return <<<PROMPT
             You are a data extraction assistant.
-            From any user text describing a purchase or expense, extract and return ONLY valid JSON with these fields:
 
+            From any user text describing one or more purchases or expenses, extract and return ONLY valid JSON.
+
+            ### Rules:
+            - If the prompt describes **one item**, return a single JSON object.
+            - If the prompt describes **multiple items**, return a JSON array of objects.
+
+            ### Each object must have the following fields:
             {
-            "title": string,
-            "quantity": number,
-            "unit_price": number,
-            "unit": string,
-            "total_price": number,
-            "category": string
+            "title": string,         // short description of the item
+            "quantity": number,      // numeric quantity (decimal if needed)
+            "unit_price": number,    // per-unit price (decimal)
+            "unit": string,          // unit of measurement (e.g., "kg", "litre", "ml", "pcs", "unit")
+            "total_price": number,   // total cost (decimal)
+            "category": string       // intelligent category ("Groceries", "Transport", "Travel", "Entertainment", etc.)
             }
 
-            Rules:
-            - Always respond in pure JSON, no explanations.
-            - Title should be a brief description of the item purchased.
-            - If unit_price is missing, infer it as (total_price / quantity).
-            - Unit can be litre/KG/ml/gram.
-            - Categories should be determined intelligently from the item mentioned (e.g., "bananas" → "Groceries", "cab" → "Transport", "hotel" → "Travel", etc.).
-            - Numbers should be returned as decimals, not strings.
-            - Ensure JSON is always valid and contains all 4 fields.
+            ### Additional rules:
+            - If unit_price is missing, calculate it as (total_price / quantity).
+            - If unit is missing, default to `"unit"`.
+            - Use sensible categories based on the item.
+            - All numeric values must be returned as numbers (not strings).
+            - Always return valid JSON with no extra text.
 PROMPT;
     }
 
