@@ -15,15 +15,32 @@ class ExpenseController extends Controller
 {
     public function index(ExpenseListingFormRequest $request)
     {
-        $expenses = $request->applyListingFilters(
-            Expense::search($request->get('quicksearch'))
-                ->with('category')
-                ->where('user_id', auth()->id())
-                ->latest()
-        )
+        $query = Expense::search($request->get('quicksearch'))
+            ->with('category')
+            ->where('user_id', auth()->id())
+            ->latest();
+
+        // Apply filters (but keep base query untouched for totals)
+        $expenses = $request->applyListingFilters(clone $query)
             ->simplePaginate($request->get('per_page', 15));
 
-        return ExpenseResource::collection($expenses);
+        // Calculate totals
+        $dailyTotal = $request->applyListingFilters(clone $query)
+            ->whereDate('created_at', today())
+            ->sum('total_price');
+
+        $monthlyTotal = $request->applyListingFilters(clone $query)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->sum('total_price');
+
+        return response()->json([
+            'data' => ExpenseResource::collection($expenses),
+            'meta' => [
+                'daily_total' => $dailyTotal,
+                'monthly_total' => $monthlyTotal,
+            ],
+        ]);
     }
 
     public function store(ExpenseFormRequest $request)
